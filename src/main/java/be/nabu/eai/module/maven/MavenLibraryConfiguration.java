@@ -8,6 +8,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement(name = "maven")
 public class MavenLibraryConfiguration {
 	
+	private List<String> artifacts;
 	private List<String> internalDomains;
 	private List<URI> repositories;
 	private boolean updateSnapshots;
@@ -31,6 +32,13 @@ public class MavenLibraryConfiguration {
 	}
 	public void setUpdateSnapshots(boolean updateSnapshots) {
 		this.updateSnapshots = updateSnapshots;
+	}
+	
+	public List<String> getArtifacts() {
+		return artifacts;
+	}
+	public void setArtifacts(List<String> artifacts) {
+		this.artifacts = artifacts;
 	}
 
 }

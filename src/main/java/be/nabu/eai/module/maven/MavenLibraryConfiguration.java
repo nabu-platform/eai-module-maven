@@ -10,6 +10,7 @@ public class MavenLibraryConfiguration {
 	
 	private List<String> artifacts;
 	private List<String> internalDomains;
+	private List<String> provided;
 	private List<URI> repositories;
 	private boolean updateSnapshots;
 
@@ -40,5 +41,10 @@ public class MavenLibraryConfiguration {
 	public void setArtifacts(List<String> artifacts) {
 		this.artifacts = artifacts;
 	}
-
+	public List<String> getProvided() {
+		return provided;
+	}
+	public void setProvided(List<String> provided) {
+		this.provided = provided;
+	}
 }

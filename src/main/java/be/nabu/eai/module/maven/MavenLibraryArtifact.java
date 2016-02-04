@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -13,6 +14,7 @@ import be.nabu.eai.repository.RepositoryTypeResolver;
 import be.nabu.eai.repository.api.Repository;
 import be.nabu.eai.repository.artifacts.jaxb.JAXBArtifact;
 import be.nabu.eai.repository.managers.MavenManager;
+import be.nabu.libs.artifacts.LocalClassLoader;
 import be.nabu.libs.artifacts.api.ClassProvidingArtifact;
 import be.nabu.libs.artifacts.api.LazyArtifact;
 import be.nabu.libs.resources.api.ResourceContainer;
@@ -69,6 +71,15 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 				for (be.nabu.libs.maven.api.Artifact internal : domainRepository.getInternalArtifacts()) {
 					logger.info("Loading maven artifact " + internal.getGroupId() + " > " + internal.getArtifactId());
 					MavenArtifact artifact = mavenManager.load(getRepository(), internal, getConfiguration().isUpdateSnapshots(), getConfiguration().getRepositories() == null ? new URI[0] : getConfiguration().getRepositories().toArray(new URI[0]));
+					if (getConfiguration().getProvided() != null) {
+						for (String provided : getConfiguration().getProvided()) {
+							String [] split = provided.split(":");
+							if (split.length != 2) {
+								throw new RuntimeException("Could not correctly set provided library: " + provided);
+							}
+							artifact.getClassLoader().addProvided(split[0], split[1]);
+						}
+					}
 					artifacts.add(artifact);
 				}
 			}
@@ -140,4 +151,14 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 		return artifacts;
 	}
 
+	@Override
+	public Collection<LocalClassLoader> getClassLoaders() {
+		List<LocalClassLoader> classLoaders = new ArrayList<LocalClassLoader>();
+		if (artifacts != null) {
+			for (MavenArtifact artifact : artifacts) {
+				classLoaders.add(artifact.getClassLoader());
+			}
+		}
+		return classLoaders;
+	}
 }

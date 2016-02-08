@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import be.nabu.eai.repository.api.Entry;
+import be.nabu.eai.repository.api.ModifiableNodeEntry;
 import be.nabu.eai.repository.api.ResourceEntry;
 import be.nabu.eai.repository.api.ResourceRepository;
 import be.nabu.libs.maven.BaseRepository;
@@ -61,6 +62,10 @@ public class EAIMavenRepository extends BaseRepository implements WritableReposi
 							repository.reload(artifact.getId());
 							ResourceArtifact resourceArtifact = new ResourceArtifact((ReadableResource) child);
 							this.artifacts.add(resourceArtifact);
+							if (entry instanceof ModifiableNodeEntry) {
+								// TODO: calculate the references to other modules!
+								((ModifiableNodeEntry) entry).updateNode(new ArrayList<String>());
+							}
 							return resourceArtifact;
 						}
 						else {

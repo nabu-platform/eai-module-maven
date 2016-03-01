@@ -25,4 +25,8 @@ public class MavenLibraryGUIManager extends BaseJAXBGUIManager<MavenLibraryConfi
 		return new MavenLibraryArtifact(entry.getId(), entry.getContainer(), entry.getRepository());
 	}
 
+	@Override
+	public String getCategory() {
+		return "Miscellaneous";
+	}
 }

@@ -41,7 +41,7 @@ public class MavenLibraryManager extends JAXBArtifactManager<MavenLibraryConfigu
 	@Override
 	public List<Validation<?>> save(ResourceEntry entry, MavenLibraryArtifact artifact) throws IOException {
 		Resource child = entry.getContainer().getChild("node.properties");
-		if (child != null) {
+		if (child == null) {
 			child = ((ManageableContainer<?>) entry.getContainer()).create("node.properties", "text/plain");
 		}
 		WritableContainer<ByteBuffer> writable = ((WritableResource) child).getWritable();
@@ -62,15 +62,17 @@ public class MavenLibraryManager extends JAXBArtifactManager<MavenLibraryConfigu
 		if (artifact.getArtifacts() == null) {
 			artifact.forceLoad();
 		}
-		for (MavenArtifact child : artifact.getArtifacts()) {
-			try {
-				List<Entry> attachChildren = MavenManager.attachChildren((ModifiableEntry) parent.getRepository().getRoot(), child, artifact.getId());
-				if (attachChildren != null) {
-					children.addAll(attachChildren);
+		if (artifact.getArtifacts() != null) {
+			for (MavenArtifact child : artifact.getArtifacts()) {
+				try {
+					List<Entry> attachChildren = MavenManager.attachChildren((ModifiableEntry) parent.getRepository().getRoot(), child, artifact.getId());
+					if (attachChildren != null) {
+						children.addAll(attachChildren);
+					}
 				}
-			}
-			catch (IOException e) {
-				logger.error("Could not attach maven artifact: " + artifact, e);
+				catch (IOException e) {
+					logger.error("Could not attach maven artifact: " + artifact, e);
+				}
 			}
 		}
 		return children;

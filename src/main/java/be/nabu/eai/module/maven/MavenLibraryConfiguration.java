@@ -12,7 +12,7 @@ public class MavenLibraryConfiguration {
 	private List<String> internalDomains;
 	private List<String> provided;
 	private List<URI> repositories;
-	private boolean updateSnapshots;
+	private boolean updateSnapshots, encapsulated;
 
 	public List<String> getInternalDomains() {
 		return internalDomains;
@@ -46,5 +46,11 @@ public class MavenLibraryConfiguration {
 	}
 	public void setProvided(List<String> provided) {
 		this.provided = provided;
+	}
+	public boolean isEncapsulated() {
+		return encapsulated;
+	}
+	public void setEncapsulated(boolean encapsulated) {
+		this.encapsulated = encapsulated;
 	}
 }

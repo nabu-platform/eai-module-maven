@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -80,6 +81,12 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 							artifact.getClassLoader().addProvided(split[0], split[1]);
 						}
 					}
+					// add a whitelist if we encapsulated it
+					if (getConfig().isEncapsulated()) {
+						for (LocalClassLoader loader : artifact.getClassLoaders()) {
+							loader.setResourceWhitelist(Arrays.asList("META-INF/services/be\\.nabu\\..*", ".*\\.png"));
+						}
+					}
 					artifacts.add(artifact);
 				}
 			}
@@ -124,6 +131,10 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 	@Override
 	public InputStream loadResource(String id) {
 		if (artifacts != null) {
+			// if it is encapsulated, we only return nabu-based service files and images
+			if (getConfig().isEncapsulated() && !id.matches("META-INF/services/be\\.nabu\\..*") && !id.matches(".*\\.png")) {
+				return null;
+			}
 			for (MavenArtifact artifact : artifacts) {
 				InputStream loadResource = artifact.loadResource(id);
 				if (loadResource != null) {

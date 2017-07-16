@@ -32,11 +32,23 @@
 			<groupId>be.nabu.eai</groupId>
 			<artifactId>eai-repository</artifactId>
 			<scope>provided</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>nabu</groupId>
+					<artifactId>eai-module-maven</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>be.nabu.eai</groupId>
 			<artifactId>eai-developer</artifactId>
 			<scope>provided</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>nabu</groupId>
+					<artifactId>eai-module-maven</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 	</dependencies>
 </project>

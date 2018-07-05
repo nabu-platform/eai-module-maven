@@ -59,11 +59,11 @@ public class MavenLibraryManager extends JAXBArtifactManager<MavenLibraryConfigu
 	@Override
 	public List<Entry> addChildren(ModifiableEntry parent, MavenLibraryArtifact artifact) throws IOException {
 		List<Entry> children = new ArrayList<Entry>();
-		if (artifact.getArtifacts() == null) {
+		if (artifact.getInternalArtifacts() == null) {
 			artifact.forceLoad();
 		}
-		if (artifact.getArtifacts() != null) {
-			for (MavenArtifact child : artifact.getArtifacts()) {
+		if (artifact.getInternalArtifacts() != null) {
+			for (MavenArtifact child : artifact.getInternalArtifacts()) {
 				try {
 					List<Entry> attachChildren = MavenManager.attachChildren((ModifiableEntry) parent.getRepository().getRoot(), child, artifact.getId());
 					if (attachChildren != null) {
@@ -81,8 +81,8 @@ public class MavenLibraryManager extends JAXBArtifactManager<MavenLibraryConfigu
 	@Override
 	public List<Entry> removeChildren(ModifiableEntry parent, MavenLibraryArtifact artifact) throws IOException {
 		List<Entry> children = new ArrayList<Entry>();
-		if (artifact.getArtifacts() != null) {
-			for (MavenArtifact child : artifact.getArtifacts()) {
+		if (artifact.getInternalArtifacts() != null) {
+			for (MavenArtifact child : artifact.getInternalArtifacts()) {
 				try {
 					List<Entry> detachChildren = MavenManager.detachChildren((ModifiableEntry) parent.getRepository().getRoot(), child);
 					if (detachChildren != null) {

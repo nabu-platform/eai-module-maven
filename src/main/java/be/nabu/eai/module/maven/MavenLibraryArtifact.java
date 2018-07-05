@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.SortedSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +20,7 @@ import be.nabu.eai.repository.managers.MavenManager;
 import be.nabu.libs.artifacts.LocalClassLoader;
 import be.nabu.libs.artifacts.api.ClassProvidingArtifact;
 import be.nabu.libs.artifacts.api.LazyArtifact;
+import be.nabu.libs.maven.api.Artifact;
 import be.nabu.libs.resources.api.ResourceContainer;
 import be.nabu.libs.services.api.DefinedServiceInterface;
 import be.nabu.libs.services.api.DefinedServiceInterfaceResolver;
@@ -31,7 +34,7 @@ import be.nabu.libs.types.SimpleTypeWrapperFactory;
 public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration> implements LazyArtifact, ClassProvidingArtifact, DefinedServiceInterfaceResolver {
 
 	private be.nabu.libs.maven.ResourceRepository domainRepository;
-	private List<MavenArtifact> artifacts;
+	private List<MavenArtifact> artifacts, internalArtifacts;
 	private Logger logger = LoggerFactory.getLogger(getClass());
 	
 	public MavenLibraryArtifact(String id, ResourceContainer<?> directory, Repository repository) {
@@ -60,40 +63,75 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 		super.forceLoad();
 		domainRepository = new be.nabu.libs.maven.ResourceRepository(getDirectory(), getRepository().getEventDispatcher());
 		try {
-			if (getConfiguration().getInternalDomains() != null) {
-				domainRepository.getDomains().addAll(getConfiguration().getInternalDomains());
-				domainRepository.scan(false);
-				DefinedTypeResolverFactory factory = new DefinedTypeResolverFactory();
-				factory.addResolver(new DefinedSimpleTypeResolver(SimpleTypeWrapperFactory.getInstance().getWrapper()));
-				factory.addResolver(new RepositoryTypeResolver(getRepository()));
-				factory.addResolver(new SPIDefinedTypeResolver());
-				MavenManager mavenManager = new MavenManager(domainRepository, factory.getResolver());
-				artifacts = new ArrayList<MavenArtifact>();
-				for (be.nabu.libs.maven.api.Artifact internal : domainRepository.getInternalArtifacts()) {
-					logger.info("Loading maven artifact " + internal.getGroupId() + " > " + internal.getArtifactId());
-					MavenArtifact artifact = mavenManager.load(getRepository(), internal, getConfiguration().isUpdateSnapshots(), getConfiguration().getRepositories() == null ? new URI[0] : getConfiguration().getRepositories().toArray(new URI[0]));
-					if (getConfiguration().getProvided() != null) {
-						for (String provided : getConfiguration().getProvided()) {
-							String [] split = provided.split(":");
-							if (split.length != 2) {
-								throw new RuntimeException("Could not correctly set provided library: " + provided);
+			domainRepository.getDomains().addAll(getConfiguration().getInternalDomains() == null ? new ArrayList<String>() : getConfiguration().getInternalDomains());
+			domainRepository.scan(false);
+			DefinedTypeResolverFactory factory = new DefinedTypeResolverFactory();
+			factory.addResolver(new DefinedSimpleTypeResolver(SimpleTypeWrapperFactory.getInstance().getWrapper()));
+			factory.addResolver(new RepositoryTypeResolver(getRepository()));
+			factory.addResolver(new SPIDefinedTypeResolver());
+			MavenManager mavenManager = new MavenManager(domainRepository, factory.getResolver());
+			artifacts = new ArrayList<MavenArtifact>();
+			internalArtifacts = new ArrayList<MavenArtifact>();
+			Set<Artifact> internalArtifacts = domainRepository.getInternalArtifacts();
+			// first we load the internal artifacts
+			// internal artifacts are exposed as services/beans etc
+			for (be.nabu.libs.maven.api.Artifact internal : internalArtifacts) {
+				logger.info("Loading internal maven artifact " + internal.getGroupId() + " > " + internal.getArtifactId());
+				MavenArtifact artifact = loadArtifact(mavenManager, internal);
+				this.artifacts.add(artifact);
+				this.internalArtifacts.add(artifact);
+			}
+			// if you have explicitly configured artifacts, we load them as well
+			// non-internal artifacts are available to the classloader but not loaded as services/beans/...
+			if (getConfig().getArtifacts() != null) {
+				for (String artifact : getConfig().getArtifacts()) {
+					int indexOf = artifact.indexOf(':');
+					if (indexOf > 0) {
+						String groupId = artifact.substring(0, indexOf);
+						String artifactId = artifact.substring(indexOf + 1);
+						SortedSet<String> versions = domainRepository.getVersions(groupId, artifactId);
+						boolean isLoaded = false;
+						Artifact mavenArtifact = null;
+						for (String version : versions) {
+							Artifact tmp = domainRepository.getArtifact(groupId, artifactId, version, false);
+							if (tmp != null) {
+								// make sure we keep the last one (highest version)
+								mavenArtifact = tmp;
+								// if we already loaded any version of it, we can ignore it
+								isLoaded |= internalArtifacts.contains(tmp);
 							}
-							artifact.getClassLoader().addProvided(split[0], split[1]);
+						}
+						if (!isLoaded && mavenArtifact != null) {
+							logger.info("Loading external maven artifact " + mavenArtifact.getGroupId() + " > " + mavenArtifact.getArtifactId());
+							this.artifacts.add(loadArtifact(mavenManager, mavenArtifact));
 						}
 					}
-					// add a whitelist if we encapsulated it
-					if (getConfig().isEncapsulated()) {
-						for (LocalClassLoader loader : artifact.getClassLoaders()) {
-							loader.setResourceWhitelist(Arrays.asList("META-INF/services/be\\.nabu\\..*", ".*\\.png"));
-						}
-					}
-					artifacts.add(artifact);
 				}
 			}
 		}
 		catch (Exception e) {
 			logger.error("Failed to force load " + getId(), e);
 		}
+	}
+
+	private MavenArtifact loadArtifact(MavenManager mavenManager, be.nabu.libs.maven.api.Artifact mavenArtifact) throws IOException {
+		MavenArtifact artifact = mavenManager.load(getRepository(), mavenArtifact, getConfiguration().isUpdateSnapshots(), getConfiguration().getRepositories() == null ? new URI[0] : getConfiguration().getRepositories().toArray(new URI[0]));
+		if (getConfiguration().getProvided() != null) {
+			for (String provided : getConfiguration().getProvided()) {
+				String [] split = provided.split(":");
+				if (split.length != 2) {
+					throw new RuntimeException("Could not correctly set provided library: " + provided);
+				}
+				artifact.getClassLoader().addProvided(split[0], split[1]);
+			}
+		}
+		// add a whitelist if we encapsulated it
+		if (getConfig().isEncapsulated()) {
+			for (LocalClassLoader loader : artifact.getClassLoaders()) {
+				loader.setResourceWhitelist(Arrays.asList("META-INF/services/be\\.nabu\\..*", ".*\\.png"));
+			}
+		}
+		return artifact;
 	}
 
 	@Override
@@ -160,6 +198,10 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 
 	public List<MavenArtifact> getArtifacts() {
 		return artifacts;
+	}
+	
+	public List<MavenArtifact> getInternalArtifacts() {
+		return internalArtifacts;
 	}
 
 	@Override

@@ -128,7 +128,8 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 		// add a whitelist if we encapsulated it
 		if (getConfig().isEncapsulated()) {
 			for (LocalClassLoader loader : artifact.getClassLoaders()) {
-				loader.setResourceWhitelist(Arrays.asList("META-INF/services/be\\.nabu\\..*", ".*\\.png"));
+				// the properties files are for language bundles
+				loader.setResourceWhitelist(Arrays.asList("META-INF/services/be\\.nabu\\..*", ".*\\.png", ".*\\.properties", ".*\\.jpg", ".*\\.svg", ".*\\.jpeg"));
 			}
 		}
 		return artifact;

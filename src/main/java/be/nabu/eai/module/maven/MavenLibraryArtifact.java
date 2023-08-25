@@ -129,7 +129,11 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 		if (getConfig().isEncapsulated()) {
 			for (LocalClassLoader loader : artifact.getClassLoaders()) {
 				// the properties files are for language bundles
-				loader.setResourceWhitelist(Arrays.asList("META-INF/services/be\\.nabu\\..*", ".*\\.png", ".*\\.properties", ".*\\.jpg", ".*\\.svg", ".*\\.jpeg"));
+				List<String> whitelist = new ArrayList<String>(Arrays.asList("META-INF/services/be\\.nabu\\..*", ".*\\.png", ".*\\.properties", ".*\\.jpg", ".*\\.svg", ".*\\.jpeg"));
+				if (getConfig().getEncapsulationWhitelists() != null) {
+					whitelist.addAll(getConfig().getEncapsulationWhitelists());
+				}
+				loader.setResourceWhitelist(whitelist);
 			}
 		}
 		return artifact;
@@ -170,8 +174,20 @@ public class MavenLibraryArtifact extends JAXBArtifact<MavenLibraryConfiguration
 	@Override
 	public InputStream loadResource(String id) {
 		if (artifacts != null) {
+			boolean encapsulated = false;
 			// if it is encapsulated, we only return nabu-based service files and images
 			if (getConfig().isEncapsulated() && !id.matches("META-INF/services/be\\.nabu\\..*") && !id.matches(".*\\.png")) {
+				encapsulated = true;
+				if (getConfig().getEncapsulationWhitelists() != null) {
+					for (String regex : getConfig().getEncapsulationWhitelists()) {
+						if (id.matches(regex)) {
+							encapsulated = false;
+							break;
+						}
+					}
+				}
+			}
+			if (encapsulated) {
 				return null;
 			}
 			for (MavenArtifact artifact : artifacts) {

@@ -13,6 +13,8 @@ public class MavenLibraryConfiguration {
 	private List<String> provided;
 	private List<URI> repositories;
 	private boolean updateSnapshots, encapsulated;
+	// you can add whitelist specific stuff in encapsulation
+	private List<String> encapsulationWhitelists;
 
 	public List<String> getInternalDomains() {
 		return internalDomains;
@@ -52,5 +54,11 @@ public class MavenLibraryConfiguration {
 	}
 	public void setEncapsulated(boolean encapsulated) {
 		this.encapsulated = encapsulated;
+	}
+	public List<String> getEncapsulationWhitelists() {
+		return encapsulationWhitelists;
+	}
+	public void setEncapsulationWhitelists(List<String> encapsulationWhitelists) {
+		this.encapsulationWhitelists = encapsulationWhitelists;
 	}
 }
